@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Role-Playing Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+        .toggle input[type="checkbox"] {
+            width: 40px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .character-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .character-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .character-card.active {
+            border-color: #667eea;
+        }
+
+        .character-card.narrator {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .character-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+
+        .character-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .character-desc {
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .message-name {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #6c757d;
+            margin-left: auto;
+        }
+
+        .message-reaction {
+            font-style: italic;
+            color: #6c757d;
+            margin-bottom: 8px;
+            padding-left: 15px;
+            border-left: 3px solid #667eea;
+        }
+
+        .message-content {
+            color: #212529;
+            line-height: 1.6;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .message-actions button {
+            padding: 5px 10px;
+            font-size: 12px;
+            border: none;
+            background: #e9ecef;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .message-actions button:hover {
+            background: #dee2e6;
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .input-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .input-controls select {
+            padding: 8px 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .input-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-box textarea {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            min-height: 60px;
+        }
+
+        .input-box button {
+            padding: 0 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .input-box button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #495057;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .scenario-panel {
+            width: 300px;
+            background: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .scenario-section {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .scenario-section h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .scenario-section textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 10px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover {
+            background: #dee2e6;
+        }
+
+        .status-bar {
+            background: #e9ecef;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 AI Role-Playing Chat</h1>
+            <div class="controls">
+                <div class="toggle">
+                    <span>Auto Response</span>
+                    <input type="checkbox" id="autoResponse" checked>
+                </div>
+                <div class="toggle">
+                    <span>Show Reactions</span>
+                    <input type="checkbox" id="showReactions" checked>
+                </div>
+                <button class="btn btn-primary" onclick="showNewConversationModal()">New Story</button>
+                <button class="btn btn-secondary" onclick="saveConversation()">Save</button>
+                <button class="btn btn-secondary" onclick="showLoadModal()">Load</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <h2>Characters</h2>
+                <div id="charactersList"></div>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="showAddCharacterModal()">Add Character</button>
+            </div>
+
+            <div class="chat-area">
+                <div id="messagesContainer" class="messages-container">
+                    <div class="loading">
+                        <p>👋 Welcome! Create a new story to begin your adventure.</p>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <div class="navigation-buttons">
+                        <button class="nav-btn" onclick="navigateMessages('back')">⬅️ Back</button>
+                        <button class="nav-btn" onclick="regenerateMessage()">🔄 Regenerate</button>
+                        <button class="nav-btn" onclick="navigateMessages('forward')">➡️ Forward</button>
+                    </div>
+                    <div class="input-controls">
+                        <select id="characterSelect">
+                            <option value="">Select character...</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="generateAIResponse()">Generate AI Response</button>
+                    </div>
+                    <div class="input-box">
+                        <textarea id="messageInput" placeholder="Type your message or let AI generate..."></textarea>
+                        <button onclick="sendManualMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scenario-panel">
+                <h2>Scenario</h2>
+                <div class="scenario-section">
+                    <h3>📖 Description</h3>
+                    <p id="scenarioDescription" style="font-size: 12px; line-height: 1.4;"></p>
+                </div>
+                <div class="scenario-section">
+                    <h3>🎬 What Happens Next</h3>
+                    <textarea id="whatHappensNext" placeholder="Guide the story direction..."></textarea>
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="updateScenario()">Update</button>
+                </div>
+                <div class="scenario-section">
+                    <h3>💭 Never Forget</h3>
+                    <textarea id="neverForget" placeholder="Important facts..."></textarea>
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="updateScenario()">Update</button>
+                </div>
+                <div class="scenario-section">
+                    <h3>📊 Stats</h3>
+                    <p style="font-size: 12px;" id="stats"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar" id="statusBar">
+            Ready
+        </div>
+    </div>
+
+    <!-- New Conversation Modal -->
+    <div id="newConversationModal" class="modal">
+        <div class="modal-content">
+            <h2>🎬 Create New Story</h2>
+            <div class="form-group">
+                <label>Scenario Description</label>
+                <textarea id="newScenario" placeholder="Describe the world, setting, and initial situation..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Character 1 Name</label>
+                <input type="text" id="char1Name" placeholder="e.g., Elena">
+            </div>
+            <div class="form-group">
+                <label>Character 1 Description</label>
+                <textarea id="char1Desc" placeholder="Personality, background, motivations..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Character 2 Name</label>
+                <input type="text" id="char2Name" placeholder="e.g., Marcus">
+            </div>
+            <div class="form-group">
+                <label>Character 2 Description</label>
+                <textarea id="char2Desc" placeholder="Personality, background, motivations..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('newConversationModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createNewConversation()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Character Modal -->
+    <div id="addCharacterModal" class="modal">
+        <div class="modal-content">
+            <h2>➕ Add New Character</h2>
+            <div class="form-group">
+                <label>Character Name</label>
+                <input type="text" id="newCharName" placeholder="Character name">
+            </div>
+            <div class="form-group">
+                <label>Character Description</label>
+                <textarea id="newCharDesc" placeholder="Personality, background, motivations..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('addCharacterModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addCharacter()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Conversation Modal -->
+    <div id="loadModal" class="modal">
+        <div class="modal-content">
+            <h2>📂 Load Conversation</h2>
+            <div id="conversationsList"></div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('loadModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
