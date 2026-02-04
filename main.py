@@ -528,8 +528,8 @@ app.mount("/images", StaticFiles(directory=IMAGES_DIR), name="images")
 
 if __name__ == "__main__":
     import uvicorn
-    print("\n🎭 Starting AI-Powered Role-Playing App...")
-    print("📝 Make sure Ollama is running: ollama serve")
-    print("📚 Download model if needed: ollama pull llama3.2:1b")
-    print("\n🌐 Open in browser: http://localhost:8000\n")
+    print("\nStarting AI-Powered Role-Playing App...")
+    print("Make sure Ollama is running: ollama serve")
+    print("Download model if needed: ollama pull llama3.2:1b")
+    print("\nOpen in browser: http://localhost:8000\n")
     uvicorn.run(app, host="0.0.0.0", port=8000)
