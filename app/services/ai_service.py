@@ -20,7 +20,11 @@ class AIService:
         try:
             response = ollama.chat(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}]
+                messages=[{"role": "user", "content": prompt}],
+                options={
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                }
             )
             return response["message"]["content"]
         except Exception as e:
@@ -34,36 +38,34 @@ class AIService:
             # First message - narrator starts
             return "narrator"
         
-        # Build prompt for AI to decide
-        recent_messages = state.conversation.messages[-3:]
-        context = "\n".join([f"{m.character_name}: {m.content}" for m in recent_messages])
+        # Get the last character who spoke
+        last_message = state.conversation.messages[-1]
+        last_character_id = last_message.character_id
         
-        characters_list = "\n".join([
-            f"- {c.id}: {c.name} ({c.description[:50]}...)"
-            for c in state.conversation.characters
-            if not c.is_narrator
-        ])
+        print(f"Last character who spoke: {last_character_id} ({last_message.character_name})")
         
-        prompt = f"""Given this conversation context:
-{context}
-
-Available characters:
-{characters_list}
-
-Scenario: {state.conversation.scenario.description}
-
-Who should respond next? Reply with ONLY the character ID (e.g., char1, char2, narrator).
-Consider the flow of conversation and who would naturally speak next."""
+        # Get all non-narrator characters
+        non_narrator_chars = [c for c in state.conversation.characters if not c.is_narrator]
         
-        response = self.get_response(prompt)
+        # If last speaker was the narrator, pick first non-narrator
+        if last_character_id == "narrator":
+            next_char = non_narrator_chars[0].id if non_narrator_chars else "narrator"
+            print(f"Last was narrator, picking: {next_char}")
+            return next_char
         
-        # Extract character ID from response
-        for char in state.conversation.characters:
-            if char.id in response.lower():
-                return char.id
+        # Get characters who haven't spoken yet or spoke least recently
+        available_chars = [c for c in non_narrator_chars if c.id != last_character_id]
         
-        # Default to first non-narrator character
-        return next(c.id for c in state.conversation.characters if not c.is_narrator)
+        if not available_chars:
+            # Only one character exists, use narrator
+            print("Only one character, using narrator")
+            return "narrator"
+        
+        # Simple alternation: pick the first available character that's not the last speaker
+        next_char_id = available_chars[0].id
+        print(f"Picking next character: {next_char_id} (avoiding {last_character_id})")
+        
+        return next_char_id
     
     async def generate_character_response(self, character: Character) -> tuple[Optional[str], str]:
         """Generate an AI response for a character"""

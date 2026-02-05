@@ -1,13 +1,13 @@
 """Application settings routes"""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Form
 from app.core.state import get_state
 
 router = APIRouter()
 
 
 @router.post("/settings/toggle")
-async def toggle_setting(setting: str, value: bool):
+async def toggle_setting(setting: str = Form(...), value: bool = Form(...)):
     """Toggle application settings"""
     state = get_state()
     

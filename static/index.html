@@ -328,6 +328,7 @@
             background: white;
             border-radius: 20px;
             padding: 30px;
+            position: relative;
             max-width: 600px;
             width: 90%;
             max-height: 80vh;
@@ -337,6 +338,30 @@
         .modal-content h2 {
             margin-bottom: 20px;
             color: #495057;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 30px;
+            height: 30px;
+            border: none;
+            background: #e9ecef;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: #dee2e6;
+            transform: rotate(90deg);
         }
 
         .form-group {
@@ -431,6 +456,52 @@
             text-align: center;
             font-size: 12px;
             color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .status-bar.thinking {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+        }
+
+        .thinking-dots {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .thinking-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: white;
+            animation: thinkingPulse 1.4s ease-in-out infinite;
+        }
+
+        .thinking-dots span:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .thinking-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .thinking-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes thinkingPulse {
+            0%, 60%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            30% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
         }
 
         .loading {
@@ -552,28 +623,29 @@
     </div>
 
     <!-- New Conversation Modal -->
-    <div id="newConversationModal" class="modal">
-        <div class="modal-content">
-            <h2>🎬 Create New Story</h2>
+    <div id="newConversationModal" class="modal" onclick="closeModalOnBackdrop(event, 'newConversationModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('newConversationModal')" title="Close">×</button>
+            <h2>Create New Story</h2>
             <div class="form-group">
-                <label>Scenario Description</label>
-                <textarea id="newScenario" placeholder="Describe the world, setting, and initial situation..."></textarea>
+                <label>Scenario Description <span style="color: #6c757d; font-weight: normal; font-size: 12px;">(optional - AI will create one)</span></label>
+                <textarea id="newScenario" placeholder="Leave blank to let AI create a scenario, or describe your own..."></textarea>
             </div>
             <div class="form-group">
-                <label>Character 1 Name</label>
+                <label>Character 1 Name <span style="color: #dc3545; font-weight: normal; font-size: 12px;">*required</span></label>
                 <input type="text" id="char1Name" placeholder="e.g., Elena">
             </div>
             <div class="form-group">
-                <label>Character 1 Description</label>
-                <textarea id="char1Desc" placeholder="Personality, background, motivations..."></textarea>
+                <label>Character 1 Description <span style="color: #6c757d; font-weight: normal; font-size: 12px;">(optional - AI will create one)</span></label>
+                <textarea id="char1Desc" placeholder="Leave blank to let AI create personality, or describe your own..."></textarea>
             </div>
             <div class="form-group">
-                <label>Character 2 Name</label>
+                <label>Character 2 Name <span style="color: #dc3545; font-weight: normal; font-size: 12px;">*required</span></label>
                 <input type="text" id="char2Name" placeholder="e.g., Marcus">
             </div>
             <div class="form-group">
-                <label>Character 2 Description</label>
-                <textarea id="char2Desc" placeholder="Personality, background, motivations..."></textarea>
+                <label>Character 2 Description <span style="color: #6c757d; font-weight: normal; font-size: 12px;">(optional - AI will create one)</span></label>
+                <textarea id="char2Desc" placeholder="Leave blank to let AI create personality, or describe your own..."></textarea>
             </div>
             <div class="form-actions">
                 <button class="btn btn-secondary" onclick="closeModal('newConversationModal')">Cancel</button>
@@ -583,16 +655,17 @@
     </div>
 
     <!-- Add Character Modal -->
-    <div id="addCharacterModal" class="modal">
-        <div class="modal-content">
-            <h2>➕ Add New Character</h2>
+    <div id="addCharacterModal" class="modal" onclick="closeModalOnBackdrop(event, 'addCharacterModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('addCharacterModal')" title="Close">×</button>
+            <h2>Add New Character</h2>
             <div class="form-group">
-                <label>Character Name</label>
+                <label>Character Name <span style="color: #dc3545; font-weight: normal; font-size: 12px;">*required</span></label>
                 <input type="text" id="newCharName" placeholder="Character name">
             </div>
             <div class="form-group">
-                <label>Character Description</label>
-                <textarea id="newCharDesc" placeholder="Personality, background, motivations..."></textarea>
+                <label>Character Description <span style="color: #6c757d; font-weight: normal; font-size: 12px;">(optional - AI will create one)</span></label>
+                <textarea id="newCharDesc" placeholder="Leave blank to let AI create personality, or describe your own..."></textarea>
             </div>
             <div class="form-actions">
                 <button class="btn btn-secondary" onclick="closeModal('addCharacterModal')">Cancel</button>
@@ -602,9 +675,10 @@
     </div>
 
     <!-- Load Conversation Modal -->
-    <div id="loadModal" class="modal">
-        <div class="modal-content">
-            <h2>📂 Load Conversation</h2>
+    <div id="loadModal" class="modal" onclick="closeModalOnBackdrop(event, 'loadModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeModal('loadModal')" title="Close">×</button>
+            <h2>Load Conversation</h2>
             <div id="conversationsList"></div>
             <div class="form-actions">
                 <button class="btn btn-secondary" onclick="closeModal('loadModal')">Cancel</button>

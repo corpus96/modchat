@@ -29,6 +29,16 @@ function setupEventListeners() {
             sendManualMessage();
         }
     });
+
+    // ESC key to close modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            // Close any active modal
+            document.querySelectorAll('.modal.active').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+    });
 }
 
 // API calls
@@ -86,6 +96,13 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
 }
 
+function closeModalOnBackdrop(event, modalId) {
+    // Close modal when clicking on the backdrop (outside the modal content)
+    if (event.target.classList.contains('modal')) {
+        closeModal(modalId);
+    }
+}
+
 function showNewConversationModal() {
     showModal('newConversationModal');
 }
@@ -105,26 +122,28 @@ function showLoadModal() {
 
 // Create new conversation
 async function createNewConversation() {
-    const scenario = document.getElementById('newScenario').value;
-    const char1Name = document.getElementById('char1Name').value;
-    const char1Desc = document.getElementById('char1Desc').value;
-    const char2Name = document.getElementById('char2Name').value;
-    const char2Desc = document.getElementById('char2Desc').value;
+    const scenario = document.getElementById('newScenario').value.trim();
+    const char1Name = document.getElementById('char1Name').value.trim();
+    const char1Desc = document.getElementById('char1Desc').value.trim();
+    const char2Name = document.getElementById('char2Name').value.trim();
+    const char2Desc = document.getElementById('char2Desc').value.trim();
 
-    if (!scenario || !char1Name || !char1Desc || !char2Name || !char2Desc) {
-        showError('Please fill in all fields');
+    // Only require character names - descriptions are optional
+    if (!char1Name || !char2Name) {
+        showError('Please provide names for both characters');
         return;
     }
 
-    showStatus('Creating story...');
+    showThinking();
+    showStatus('Creating story with AI...');
 
     try {
         const formData = new URLSearchParams({
-            scenario_description: scenario,
+            scenario_description: scenario || '',
             character1_name: char1Name,
-            character1_description: char1Desc,
+            character1_description: char1Desc || '',
             character2_name: char2Name,
-            character2_description: char2Desc
+            character2_description: char2Desc || ''
         });
 
         await fetch('/api/conversation/new', {
@@ -135,24 +154,39 @@ async function createNewConversation() {
 
         closeModal('newConversationModal');
         await loadState();
-        showSuccess('Story created! Click on a character or generate AI response to begin.');
+        hideThinking();
+        showSuccess('Story created! Click on a character to begin.');
+        
+        // Clear form
+        document.getElementById('newScenario').value = '';
+        document.getElementById('char1Name').value = '';
+        document.getElementById('char1Desc').value = '';
+        document.getElementById('char2Name').value = '';
+        document.getElementById('char2Desc').value = '';
     } catch (error) {
+        hideThinking();
         showError('Failed to create conversation');
     }
 }
 
 // Add character
 async function addCharacter() {
-    const name = document.getElementById('newCharName').value;
-    const description = document.getElementById('newCharDesc').value;
+    const name = document.getElementById('newCharName').value.trim();
+    const description = document.getElementById('newCharDesc').value.trim();
 
-    if (!name || !description) {
-        showError('Please fill in all fields');
+    if (!name) {
+        showError('Please provide a character name');
         return;
     }
 
+    showThinking();
+
     try {
-        const formData = new URLSearchParams({ name, description });
+        const formData = new URLSearchParams({ 
+            name, 
+            description: description || '' 
+        });
+        
         await fetch('/api/character/add', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -161,14 +195,22 @@ async function addCharacter() {
 
         closeModal('addCharacterModal');
         await loadState();
+        hideThinking();
         showSuccess('Character added!');
+        
+        // Clear form
+        document.getElementById('newCharName').value = '';
+        document.getElementById('newCharDesc').value = '';
     } catch (error) {
+        hideThinking();
         showError('Failed to add character');
     }
 }
 
 // Generate AI response
 async function generateAIResponse() {
+    console.log('generateAIResponse called, auto_response_enabled:', currentState.auto_response_enabled);
+    
     if (!currentState.conversation) {
         showError('No active conversation');
         return;
@@ -183,7 +225,8 @@ async function generateAIResponse() {
         return;
     }
 
-    showStatus('Generating AI response...');
+    // Show thinking indicator
+    showThinking();
 
     try {
         const formData = new URLSearchParams();
@@ -191,16 +234,23 @@ async function generateAIResponse() {
             formData.append('character_id', characterId);
         }
 
-        await fetch('/api/message/generate', {
+        const response = await fetch('/api/message/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData
         });
 
+        if (!response.ok) {
+            throw new Error('Failed to generate message');
+        }
+
         await loadState();
-        showStatus('Ready');
+        hideThinking();
+        
+        console.log('Message generated successfully');
     } catch (error) {
-        showError('Failed to generate response');
+        console.error('Generate AI response error:', error);
+        showError(error.message);
     }
 }
 
@@ -208,6 +258,13 @@ async function generateAIResponse() {
 async function sendManualMessage() {
     const content = document.getElementById('messageInput').value.trim();
     const characterId = document.getElementById('characterSelect').value;
+
+    console.log('sendManualMessage called:', {
+        content: content,
+        characterId: characterId,
+        hasConversation: !!currentState.conversation,
+        conversation: currentState.conversation
+    });
 
     if (!content) {
         showError('Please enter a message');
@@ -219,22 +276,49 @@ async function sendManualMessage() {
         return;
     }
 
+    if (!currentState.conversation) {
+        showError('No active conversation. Please create a new story first.');
+        return;
+    }
+
     try {
         const formData = new URLSearchParams({
             character_id: characterId,
             content: content
         });
 
-        await fetch('/api/message/manual', {
+        console.log('Sending manual message:', { character_id: characterId, content: content });
+
+        const response = await fetch('/api/message/manual', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData
         });
 
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Failed to send message:', response.status, errorData);
+            throw new Error(errorData.detail || 'Failed to send message');
+        }
+
         document.getElementById('messageInput').value = '';
         await loadState();
+        hideThinking();
+        
+        console.log('Manual message sent, auto_response_enabled:', currentState.auto_response_enabled);
+        
+        // Auto-generate ONE response from another character if enabled
+        if (currentState.auto_response_enabled) {
+            console.log('Scheduling ONE AI response after manual message...');
+            // Small delay to show the manual message first
+            setTimeout(() => {
+                console.log('Triggering ONE AI response after manual message');
+                generateAIResponse(); // Generate ONE response, then STOP (will show thinking indicator)
+            }, 800);
+        }
     } catch (error) {
-        showError('Failed to send message');
+        console.error('Send manual message error:', error);
+        showError('Failed to send message: ' + error.message);
     }
 }
 
@@ -408,7 +492,9 @@ async function loadConversation(filename) {
 }
 
 // Select character
-function selectCharacter(characterId) {
+async function selectCharacter(characterId) {
+    console.log('Character card clicked:', characterId);
+    
     currentState.selectedCharacterId = characterId;
     document.getElementById('characterSelect').value = characterId;
     
@@ -417,6 +503,42 @@ function selectCharacter(characterId) {
         card.classList.remove('active');
     });
     document.querySelector(`[data-character-id="${characterId}"]`)?.classList.add('active');
+    
+    // Automatically generate a response for this character
+    if (!currentState.conversation) {
+        showError('No active conversation');
+        return;
+    }
+    
+    // Get character name for thinking indicator
+    const character = currentState.conversation.characters.find(c => c.id === characterId);
+    const characterName = character ? character.name : 'Character';
+    
+    console.log('Generating AI response for character:', characterId);
+    showThinking(characterName);
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('character_id', characterId);
+
+        const response = await fetch('/api/message/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to generate message');
+        }
+
+        await loadState();
+        hideThinking();
+        console.log('Message generated successfully for:', characterId);
+    } catch (error) {
+        console.error('Generate message error:', error);
+        showError(error.message);
+    }
 }
 
 // Render conversation
@@ -541,17 +663,43 @@ function renderStats() {
 
 // UI helpers
 function showStatus(message) {
-    document.getElementById('statusBar').textContent = message;
+    const statusBar = document.getElementById('statusBar');
+    statusBar.classList.remove('thinking');
+    statusBar.innerHTML = message;
+}
+
+function showThinking(characterName = null) {
+    const statusBar = document.getElementById('statusBar');
+    statusBar.classList.add('thinking');
+    const message = characterName ? `${characterName} is thinking` : 'AI is thinking';
+    statusBar.innerHTML = `
+        ${message}
+        <div class="thinking-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    `;
+}
+
+function hideThinking() {
+    const statusBar = document.getElementById('statusBar');
+    statusBar.classList.remove('thinking');
+    statusBar.textContent = 'Ready';
 }
 
 function showError(message) {
-    showStatus(`❌ ${message}`);
-    setTimeout(() => showStatus('Ready'), 3000);
+    const statusBar = document.getElementById('statusBar');
+    statusBar.classList.remove('thinking');
+    statusBar.textContent = `Error: ${message}`;
+    setTimeout(() => hideThinking(), 3000);
 }
 
 function showSuccess(message) {
-    showStatus(`✅ ${message}`);
-    setTimeout(() => showStatus('Ready'), 3000);
+    const statusBar = document.getElementById('statusBar');
+    statusBar.classList.remove('thinking');
+    statusBar.textContent = `${message}`;
+    setTimeout(() => hideThinking(), 2000);
 }
 
 // Refresh messages display

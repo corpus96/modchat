@@ -1,6 +1,6 @@
 """Character management routes"""
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from datetime import datetime
 import os
 
@@ -12,12 +12,24 @@ router = APIRouter()
 
 
 @router.post("/character/add")
-async def add_character(name: str, description: str):
+async def add_character(name: str = Form(...), description: str = Form("")):
     """Add a new character to the current conversation"""
+    from app.services.ai_service import ai_service
     state = get_state()
     
     if not state.conversation:
         raise HTTPException(status_code=400, detail="No active conversation")
+    
+    # Generate description if empty
+    if not description or description.strip() == "":
+        prompt = f"""Create a character description for someone named {name}.
+
+Setting: {state.conversation.scenario.description}
+
+Write 1-2 sentences describing their personality, background, and speaking style. Make them fit the story and be interesting.
+
+Character description:"""
+        description = ai_service.get_response(prompt).strip()
     
     char_id = f"char{len(state.conversation.characters)}"
     new_char = Character(

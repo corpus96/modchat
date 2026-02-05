@@ -14,65 +14,64 @@ class PromptBuilder:
         if not state.conversation:
             return ""
         
-        # Get recent context
-        recent_messages = state.conversation.messages[-5:]
+        # Get more context - last 10 messages or all if fewer
+        message_count = min(10, len(state.conversation.messages))
+        recent_messages = state.conversation.messages[-message_count:] if message_count > 0 else []
+        
+        # Build context with clear speaker labels
         context = "\n".join([
-            f"{m.character_name}: {m.reaction or ''} \"{m.content}\""
+            f"{m.character_name}: {m.content}"
             for m in recent_messages
         ])
         
         if character.is_narrator:
-            return self._build_narrator_prompt(context)
+            return self._build_narrator_prompt(context, recent_messages)
         else:
-            return self._build_character_prompt(character, context)
+            return self._build_character_prompt(character, context, recent_messages)
     
-    def _build_narrator_prompt(self, context: str) -> str:
+    def _build_narrator_prompt(self, context: str, recent_messages: list) -> str:
         """Build prompt for narrator"""
         state = get_state()
         scenario = state.conversation.scenario
         
-        prompt = f"""You are the Narrator of this story.
+        prompt = f"""You are the Narrator describing this scene.
 
-Scenario: {scenario.description}
-Current State: {scenario.current_state}
-What Happens Next: {scenario.what_happens_next}
-Never Forget: {scenario.never_forget}
+Setting: {scenario.description}
 
-Recent conversation:
-{context}
+Recent events:
+{context if context else '(Story beginning)'}
 
-Describe what happens next in the story. Write a vivid, engaging narrative description.
-Format: [Narrative description]
+Describe what happens next. Write 2-3 sentences about the scene, atmosphere, or events. Do NOT write character dialogue.
 
-Keep it concise (2-3 sentences)."""
+Your narration:"""
         
         return prompt
     
-    def _build_character_prompt(self, character: Character, context: str) -> str:
+    def _build_character_prompt(self, character: Character, context: str, recent_messages: list) -> str:
         """Build prompt for regular character"""
         state = get_state()
         scenario = state.conversation.scenario
         
+        # Get the last message to respond to
+        last_msg = recent_messages[-1] if recent_messages else None
+        last_speaker = last_msg.character_name if last_msg else "unknown"
+        last_content = last_msg.content if last_msg else "nothing yet"
+        
         prompt = f"""You are {character.name}.
 
-Description: {character.description}
-Personality: {character.personality}
-Speech Patterns: {character.speech_patterns}
-Motivations: {character.motivations}
+Character: {character.description}
+Setting: {scenario.description}
 
-Scenario: {scenario.description}
-Never Forget: {scenario.never_forget}
+Conversation:
+{context if context else '(Just starting)'}
 
-Recent conversation:
-{context}
+{last_speaker} just said: "{last_content}"
 
-Respond as {character.name}. Show your character's personality and emotions.
-Format:
-[Physical/emotional reaction] "Your spoken dialogue"
+Respond as {character.name}. Write your response in this format:
+[physical action or emotion] "what you say"
 
-Example:
-[She crosses her arms, eyes narrowing with suspicion] "I don't believe you for a second."
+Example: [smiles warmly] "That's exactly what I was thinking!"
 
-Keep it natural and in-character."""
+Your response:"""
         
         return prompt

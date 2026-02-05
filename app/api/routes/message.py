@@ -1,6 +1,6 @@
 """Message management routes"""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Form
 from typing import Optional
 
 from app.models import Message
@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.post("/message/generate")
-async def generate_message(character_id: Optional[str] = None):
+async def generate_message(character_id: Optional[str] = Form(None)):
     """Generate an AI response for a character"""
     state = get_state()
     
@@ -55,7 +55,11 @@ async def generate_message(character_id: Optional[str] = None):
 
 
 @router.post("/message/manual")
-async def add_manual_message(character_id: str, content: str, reaction: Optional[str] = None):
+async def add_manual_message(
+    character_id: str = Form(...),
+    content: str = Form(...),
+    reaction: Optional[str] = Form(None)
+):
     """Add a manually written message"""
     state = get_state()
     
@@ -115,7 +119,7 @@ async def regenerate_last_message():
 
 
 @router.post("/message/navigate")
-async def navigate_messages(direction: str):
+async def navigate_messages(direction: str = Form(...)):
     """Navigate forward or backward in message history"""
     state = get_state()
     
